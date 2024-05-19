@@ -83,7 +83,10 @@ async function run() {
 
     //get all rooms from db
     app.get("/rooms", async(req,res)=>{
-      const result = await roomsCollection.find().toArray();
+      const category = req.query.category;
+      let query = {};
+      if(category && category !== 'null') query={category};
+      const result = await roomsCollection.find(query).toArray();
       res.send(result)
     })
 
@@ -92,6 +95,8 @@ async function run() {
         const result = await roomsCollection.findOne({_id: new ObjectId(req.params.id)})
         res.send(result)
       })
+
+      
 
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 })
