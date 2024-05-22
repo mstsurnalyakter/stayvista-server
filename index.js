@@ -91,11 +91,11 @@ async function run() {
     })
 
     // save a room data to database
-    app.post("/rooms", async(req,res)=>{
-      console.log(req.body);
-      const result = await roomsCollection.insertOne(req.body)
-      res.send(result)
-    });
+    app.post("/room", async(req,res)=>{
+      const result = await roomsCollection.insertOne(req.body);
+      res.send(result);
+
+    })
 
     //get a single room data from db using _id
       app.get("/room/:id", async(req,res)=>{
