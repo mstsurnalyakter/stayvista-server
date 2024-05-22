@@ -50,6 +50,7 @@ async function run() {
   try {
 
     const roomsCollection = client.db('stayvista').collection('rooms');
+    const usersCollection = client.db('stayvista').collection('users');
 
     // auth related api
     app.post('/jwt', async (req, res) => {
@@ -79,6 +80,23 @@ async function run() {
       } catch (err) {
         res.status(500).send(err)
       }
+    })
+
+
+    // save a user data in database
+    app.put('/user', async (req, res) => {
+      const user = req.body;
+      const options = {upsert:true}
+      const query = {email:user?.email};
+      const updateDoc = {
+        $set:{
+          ...user,
+          timestamp:Date.now()
+        }
+      }
+      const result = await usersCollection.updateOne(query,updateDoc,options);
+      res.send(result);
+
     })
 
     //get all rooms from db
