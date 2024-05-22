@@ -86,8 +86,15 @@ async function run() {
     // save a user data in database
     app.put('/user', async (req, res) => {
       const user = req.body;
+      const query = { email: user?.email };
+
+      // check if user already exists in db
+      const isExist = await usersCollection.findOne(query);
+      if (isExist) return res.send(isExist)
+
       const options = {upsert:true}
-      const query = {email:user?.email};
+
+      //save user for first time
       const updateDoc = {
         $set:{
           ...user,
@@ -97,6 +104,12 @@ async function run() {
       const result = await usersCollection.updateOne(query,updateDoc,options);
       res.send(result);
 
+    })
+
+    // get all users data from db
+    app.get("/users", async(req,res)=>{
+      const result = await usersCollection.find().toArray();
+      res.send(result);
     })
 
     //get all rooms from db
