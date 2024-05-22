@@ -109,6 +109,12 @@ async function run() {
         res.send(result)
       })
 
+      // delete a room
+      app.delete("/room/:id",async(req,res)=>{
+        const result = await roomsCollection.deleteOne({_id:new ObjectId(req.params.id)});
+        res.send(result);
+      })
+
 
 
     // Send a ping to confirm a successful connection
