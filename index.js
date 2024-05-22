@@ -90,13 +90,20 @@ async function run() {
       res.send(result)
     })
 
+    // save a room data to database
+    app.post("/rooms", async(req,res)=>{
+      console.log(req.body);
+      const result = await roomsCollection.insertOne(req.body)
+      res.send(result)
+    });
+
     //get a single room data from db using _id
       app.get("/room/:id", async(req,res)=>{
         const result = await roomsCollection.findOne({_id: new ObjectId(req.params.id)})
         res.send(result)
       })
 
-      
+
 
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 })
