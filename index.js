@@ -84,27 +84,73 @@ async function run() {
 
 
     // save a user data in database
-    app.put('/user', async (req, res) => {
+    app.put("/user", async (req, res) => {
       const user = req.body;
-      const query = { email: user?.email };
 
+      const query = { email: user?.email };
       // check if user already exists in db
       const isExist = await usersCollection.findOne(query);
-      if (isExist) return res.send(isExist)
-
-      const options = {upsert:true}
-
-      //save user for first time
-      const updateDoc = {
-        $set:{
-          ...user,
-          timestamp:Date.now()
+      if (isExist) {
+        if (user.status === "Requested") {
+          // if existing user try to change his role
+          const result = await usersCollection.updateOne(query, {
+            $set: { status: user?.status },
+          });
+          return res.send(result);
+        } else {
+          // if existing user login again
+          return res.send(isExist);
         }
       }
-      const result = await usersCollection.updateOne(query,updateDoc,options);
-      res.send(result);
 
-    })
+      // save user for the first time
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...user,
+          timestamp: Date.now(),
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc, options);
+      // welcome new user
+      // sendEmail(user?.email, {
+      //   subject: "Welcome to Stayvista!",
+      //   message: `Hope you will find you destination`,
+      // });
+      res.send(result);
+    });
+
+
+    
+    // app.put('/user', async (req, res) => {
+    //   const user = req.body;
+    //   const query = { email: user?.email };
+
+    //   // check if user already exists in db
+    //   const isExist = await usersCollection.findOne(query);
+    //   if (isExist) {
+    //     if (user.status === "Requested") {
+    //       const result = await usersCollection.updateOne(query,{$set:{status:user?.status}})
+    //       res.send(result);
+    //     }
+    //   } else {
+    //     return res.send(isExist);
+    //   }
+    //   // if (isExist) return res.send(isExist)
+
+    //   const options = {upsert:true}
+
+    //   //save user for first time
+    //   const updateDoc = {
+    //     $set:{
+    //       ...user,
+    //       timestamp:Date.now()
+    //     }
+    //   }
+    //   const result = await usersCollection.updateOne(query,updateDoc,options);
+    //   res.send(result);
+
+    // })
 
     // get all users data from db
     app.get("/users", async(req,res)=>{
