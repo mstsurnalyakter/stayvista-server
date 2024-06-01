@@ -5,7 +5,7 @@ const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 const jwt = require('jsonwebtoken')
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 8000
 
 // middleware
@@ -54,34 +54,31 @@ async function run() {
     const usersCollection = client.db("stayvista").collection("users");
 
     // verify admin middleware
-    const verifyAdmin = async (req,res,next) =>{
+    const verifyAdmin = async (req, res, next) => {
       console.log("admin middleware");
       const user = req.user;
-      const query = {email:user?.email};
+      const query = { email: user?.email };
       const result = await usersCollection.findOne(query);
 
-      if (!result || result?.role !== 'admin') {
-        return res.status(401).send({message:'unauthorized access.'})
+      if (!result || result?.role !== "admin") {
+        return res.status(401).send({ message: "unauthorized access." });
       }
 
       next();
-
-    }
+    };
     // verify admin middleware
-    const verifyHost = async (req,res,next) =>{
+    const verifyHost = async (req, res, next) => {
       console.log("host middleware");
       const user = req.user;
-      const query = {email:user?.email};
+      const query = { email: user?.email };
       const result = await usersCollection.findOne(query);
 
-      if (!result || result?.role !== 'host') {
-        return res.status(401).send({message:'unauthorized access.'})
+      if (!result || result?.role !== "host") {
+        return res.status(401).send({ message: "unauthorized access." });
       }
 
       next();
-
-    }
-
+    };
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -112,6 +109,24 @@ async function run() {
         res.status(500).send(err);
       }
     });
+
+    // create-payment-intent
+    app.post("/create-payment-intent",verifyToken, async(req,res)=>{
+      const price = req.body.price;
+      const priceInCent = parseFloat(price)*100;
+      if (!price || priceInCent < 1) return;
+      // generate clientSecret
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: priceInCent,
+        currency: "usd",
+        // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+      // send clientSecret as response
+      res.send({ clientSecret:client_secret });
+    })
 
     // save a user data in database
     app.put("/user", async (req, res) => {
@@ -150,7 +165,6 @@ async function run() {
       res.send(result);
     });
 
-
     // get a user info by email from db
     app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
@@ -158,27 +172,26 @@ async function run() {
       res.send(result);
     });
 
-
     // get all users data from db
-    app.get("/users",verifyToken,verifyAdmin, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
     //update user role
-    app.patch("/users/update/:email",async(req,res)=>{
+    app.patch("/users/update/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
-      const query = {email};
+      const query = { email };
       const updateDoc = {
-        $set:{
+        $set: {
           ...user,
-          timestamp:Date.now()
-        }
-      }
-      const result = await usersCollection.updateOne(query,updateDoc);
-      res.send(result)
-    })
+          timestamp: Date.now(),
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     //get all rooms from db
     app.get("/rooms", async (req, res) => {
