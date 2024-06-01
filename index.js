@@ -36,6 +36,8 @@ const verifyToken = async (req, res, next) => {
   })
 }
 
+
+
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@main.mq0mae1.mongodb.net/?retryWrites=true&w=majority&appName=Main`
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.jimwvxl.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 const client = new MongoClient(uri, {
@@ -50,6 +52,36 @@ async function run() {
   try {
     const roomsCollection = client.db("stayvista").collection("rooms");
     const usersCollection = client.db("stayvista").collection("users");
+
+    // verify admin middleware
+    const verifyAdmin = async (req,res,next) =>{
+      console.log("admin middleware");
+      const user = req.user;
+      const query = {email:user?.email};
+      const result = await usersCollection.findOne(query);
+
+      if (!result || result?.role !== 'admin') {
+        return res.status(401).send({message:'unauthorized access.'})
+      }
+
+      next();
+
+    }
+    // verify admin middleware
+    const verifyHost = async (req,res,next) =>{
+      console.log("host middleware");
+      const user = req.user;
+      const query = {email:user?.email};
+      const result = await usersCollection.findOne(query);
+
+      if (!result || result?.role !== 'host') {
+        return res.status(401).send({message:'unauthorized access.'})
+      }
+
+      next();
+
+    }
+
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -128,7 +160,7 @@ async function run() {
 
 
     // get all users data from db
-    app.get("/users", async (req, res) => {
+    app.get("/users",verifyToken,verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -158,18 +190,23 @@ async function run() {
     });
 
     // save a room data to database
-    app.post("/room", async (req, res) => {
+    app.post("/room", verifyToken, verifyHost, async (req, res) => {
       const result = await roomsCollection.insertOne(req.body);
       res.send(result);
     });
 
     //get all room for host
-    app.get("/my-listings/:email", async (req, res) => {
-      const result = await roomsCollection
-        .find({ "host.email": req.params.email })
-        .toArray();
-      res.send(result);
-    });
+    app.get(
+      "/my-listings/:email",
+      verifyToken,
+      verifyHost,
+      async (req, res) => {
+        const result = await roomsCollection
+          .find({ "host.email": req.params.email })
+          .toArray();
+        res.send(result);
+      }
+    );
 
     //get a single room data from db using _id
     app.get("/room/:id", async (req, res) => {
@@ -180,7 +217,7 @@ async function run() {
     });
 
     // delete a room
-    app.delete("/room/:id", async (req, res) => {
+    app.delete("/room/:id", verifyToken, verifyHost, async (req, res) => {
       const result = await roomsCollection.deleteOne({
         _id: new ObjectId(req.params.id),
       });
