@@ -48,40 +48,38 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-
-    const roomsCollection = client.db('stayvista').collection('rooms');
-    const usersCollection = client.db('stayvista').collection('users');
+    const roomsCollection = client.db("stayvista").collection("rooms");
+    const usersCollection = client.db("stayvista").collection("users");
 
     // auth related api
-    app.post('/jwt', async (req, res) => {
-      const user = req.body
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: '365d',
-      })
+        expiresIn: "365d",
+      });
       res
-        .cookie('token', token, {
+        .cookie("token", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
         })
-        .send({ success: true })
-    })
+        .send({ success: true });
+    });
     // Logout
-    app.get('/logout', async (req, res) => {
+    app.get("/logout", async (req, res) => {
       try {
         res
-          .clearCookie('token', {
+          .clearCookie("token", {
             maxAge: 0,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
           })
-          .send({ success: true })
-        console.log('Logout successful')
+          .send({ success: true });
+        console.log("Logout successful");
       } catch (err) {
-        res.status(500).send(err)
+        res.status(500).send(err);
       }
-    })
-
+    });
 
     // save a user data in database
     app.put("/user", async (req, res) => {
@@ -120,85 +118,65 @@ async function run() {
       res.send(result);
     });
 
+  
+    // get a user info by email from db
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email });
+      res.send(result);
+    });
 
-    
-    // app.put('/user', async (req, res) => {
-    //   const user = req.body;
-    //   const query = { email: user?.email };
-
-    //   // check if user already exists in db
-    //   const isExist = await usersCollection.findOne(query);
-    //   if (isExist) {
-    //     if (user.status === "Requested") {
-    //       const result = await usersCollection.updateOne(query,{$set:{status:user?.status}})
-    //       res.send(result);
-    //     }
-    //   } else {
-    //     return res.send(isExist);
-    //   }
-    //   // if (isExist) return res.send(isExist)
-
-    //   const options = {upsert:true}
-
-    //   //save user for first time
-    //   const updateDoc = {
-    //     $set:{
-    //       ...user,
-    //       timestamp:Date.now()
-    //     }
-    //   }
-    //   const result = await usersCollection.updateOne(query,updateDoc,options);
-    //   res.send(result);
-
-    // })
 
     // get all users data from db
-    app.get("/users", async(req,res)=>{
+    app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
-    })
+    });
 
     //get all rooms from db
-    app.get("/rooms", async(req,res)=>{
+    app.get("/rooms", async (req, res) => {
       const category = req.query.category;
       let query = {};
-      if(category && category !== 'null') query={category};
+      if (category && category !== "null") query = { category };
       const result = await roomsCollection.find(query).toArray();
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // save a room data to database
-    app.post("/room", async(req,res)=>{
+    app.post("/room", async (req, res) => {
       const result = await roomsCollection.insertOne(req.body);
       res.send(result);
-
-    })
+    });
 
     //get all room for host
-    app.get("/my-listings/:email", async(req,res)=>{
-      const result = await roomsCollection.find({"host.email":req.params.email}).toArray();
+    app.get("/my-listings/:email", async (req, res) => {
+      const result = await roomsCollection
+        .find({ "host.email": req.params.email })
+        .toArray();
       res.send(result);
     });
 
     //get a single room data from db using _id
-      app.get("/room/:id", async(req,res)=>{
-        const result = await roomsCollection.findOne({_id: new ObjectId(req.params.id)})
-        res.send(result)
-      })
+    app.get("/room/:id", async (req, res) => {
+      const result = await roomsCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
+      res.send(result);
+    });
 
-      // delete a room
-      app.delete("/room/:id",async(req,res)=>{
-        const result = await roomsCollection.deleteOne({_id:new ObjectId(req.params.id)});
-        res.send(result);
-      })
-
-
+    // delete a room
+    app.delete("/room/:id", async (req, res) => {
+      const result = await roomsCollection.deleteOne({
+        _id: new ObjectId(req.params.id),
+      });
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     // await client.db('admin').command({ ping: 1 })
     console.log(
-      'Pinged your deployment. You successfully connected to MongoDB!'
-    )
+      "Pinged your deployment. You successfully connected to MongoDB!"
+    );
   } finally {
     // Ensures that the client will close when you finish/error
   }
