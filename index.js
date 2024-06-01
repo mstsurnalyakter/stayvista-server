@@ -50,8 +50,10 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const roomsCollection = client.db("stayvista").collection("rooms");
-    const usersCollection = client.db("stayvista").collection("users");
+    const db = client.db("stayvista");
+    const roomsCollection = db.collection("rooms");
+    const usersCollection = db.collection("users");
+    const bookingsCollection = db.collection("bookings");
 
     // verify admin middleware
     const verifyAdmin = async (req, res, next) => {
@@ -111,9 +113,9 @@ async function run() {
     });
 
     // create-payment-intent
-    app.post("/create-payment-intent",verifyToken, async(req,res)=>{
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
       const price = req.body.price;
-      const priceInCent = parseFloat(price)*100;
+      const priceInCent = parseFloat(price) * 100;
       if (!price || priceInCent < 1) return;
       // generate clientSecret
       const { client_secret } = await stripe.paymentIntents.create({
@@ -125,8 +127,8 @@ async function run() {
         },
       });
       // send clientSecret as response
-      res.send({ clientSecret:client_secret });
-    })
+      res.send({ clientSecret: client_secret });
+    });
 
     // save a user data in database
     app.put("/user", async (req, res) => {
@@ -234,6 +236,12 @@ async function run() {
       const result = await roomsCollection.deleteOne({
         _id: new ObjectId(req.params.id),
       });
+      res.send(result);
+    });
+
+    // save a bookings data to database
+    app.post("/booking", verifyToken, async (req, res) => {
+      const result = await bookingsCollection.insertOne(req.body);
       res.send(result);
     });
 
