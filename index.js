@@ -241,8 +241,31 @@ async function run() {
 
     // save a bookings data to database
     app.post("/booking", verifyToken, async (req, res) => {
-      const result = await bookingsCollection.insertOne(req.body);
+      const bookingData = req.body;
+      // save room booking info
+      const result = await bookingsCollection.insertOne(bookingData);
+
+      //change availability status
+      // const roomId = bookingData?.roomId;
+      // const query = {_id: new ObjectId(roomId)}
+      // const updateDoc = {
+      //   $set:{booked:true}
+      // }
+      // const updatedRoom = await roomsCollection.updateOne(query,updateDoc);
+      // console.log(updatedRoom);
       res.send(result);
+    });
+
+    //update room status
+    app.patch("/room/status/:id",async(req,res)=>{
+      const id = req.params.id;
+      const status = req.body.status;
+      const query = {_id: new ObjectId(id)};
+      const updateDoc = {
+        $set:{booked:status}
+      }
+      const result = await roomsCollection.updateOne(query,updateDoc);
+      res.send(result)
     });
 
     // Send a ping to confirm a successful connection
