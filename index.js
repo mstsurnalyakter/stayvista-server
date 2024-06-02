@@ -364,13 +364,7 @@ async function run() {
         (sum, booking) => sum + booking.price,
         0
       );
-      // const data = [
-      //   ['Day', 'Sales'],
-      //   ['9/5', 1000],
-      //   ['10/2', 1170],
-      //   ['11/1', 660],
-      //   ['12/11', 1030],
-      // ]
+
       const chartData = bookingDetails.map((booking) => {
         const day = new Date(booking.date).getDate();
         const month = new Date(booking.date).getMonth() + 1;
@@ -385,6 +379,56 @@ async function run() {
       console.log(bookingDetails);
       res.send({
         totalUsers,
+        totalRooms,
+        totalBookings: bookingDetails.length,
+        totalPrice,
+        chartData,
+      });
+    });
+
+
+    // Host Statistics
+    app.get("/host-stat", verifyToken, verifyHost, async (req, res) => {
+      const {email} = req.user;
+      const bookingDetails = await bookingsCollection
+        .find(
+          {"host.email":email},
+          {
+            projection: {
+              date: 1,
+              price: 1,
+            },
+          }
+        )
+        .toArray();
+
+      const totalRooms = await roomsCollection.countDocuments({
+        "host.email": email,
+      });
+      const totalPrice = bookingDetails.reduce(
+        (sum, booking) => sum + booking.price,
+        0
+      );
+
+      const {timestamp} = await usersCollection.findOne(
+        {email},
+        {projection:{timestamp:1}}
+      )
+
+      const chartData = bookingDetails.map((booking) => {
+        const day = new Date(booking.date).getDate();
+        const month = new Date(booking.date).getMonth() + 1;
+        const data = [`${day}/${month}`, booking?.price];
+        return data;
+      });
+      chartData.unshift(["Day", "Sales"]);
+      // chartData.splice(0, 0, ['Day', 'Sales'])
+
+      console.log(chartData);
+
+      console.log(bookingDetails);
+      res.send({
+        hostSince:timestamp,
         totalRooms,
         totalBookings: bookingDetails.length,
         totalPrice,
